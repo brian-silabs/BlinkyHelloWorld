@@ -17,3 +17,14 @@ GNU ARM v12.2.1 - Debug/
 .vscode/
 *_cmake/
 vscode.conf
+
+#IAR Project Gitignore
+*.ewp
+*.eww
+*.ewd
+*.ewt
+*.ipcf
+*.custom_argvars
+settings/
+Default/
+ewarm-IAR

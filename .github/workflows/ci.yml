@@ -1,0 +1,242 @@
+name: CI Workflow
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Prepare all global env vars
+      - name: Preparing Build env vars
+        run: |
+          echo "SOLUTION_REL_DIR=solution" >> $GITHUB_ENV
+          echo "DEPENDENCIES_REL_DIR=dependencies" >> $GITHUB_ENV
+          echo "TOOLS_REL_DIR=tools" >> $GITHUB_ENV
+          echo "ZAP_VERSION=v2024.08.15" >> $GITHUB_ENV
+          echo "ARM_GCC_VERSION=12.2.Rel1" >> $GITHUB_ENV
+          echo "ARM_GCC_ABS_DIR=/opt/gcc-arm-none-eabi" >> $GITHUB_ENV
+          echo "ARM_GCC_BIN_ABS_DIR=/opt/gcc-arm-none-eabi/bin" >> $GITHUB_ENV
+
+      - name: Preparing env vars
+        run: |
+          echo "TOOLS_ABS_DIR=$GITHUB_WORKSPACE/$TOOLS_REL_DIR" >> $GITHUB_ENV
+          echo "DEPENDENCIES_ABS_DIR=$GITHUB_WORKSPACE/$DEPENDENCIES_REL_DIR" >> $GITHUB_ENV
+          echo "SOLUTION_ABS_DIR=$GITHUB_WORKSPACE/$SOLUTION_REL_DIR" >> $GITHUB_ENV
+          echo "REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
+          echo "RUNNER_ARCHITECTURE=$(arch)" >> $GITHUB_ENV
+
+      - name: Preparing env vars 2
+        run: |
+          echo "ZAP_REL_DIR=${{ env.TOOLS_REL_DIR }}/zap" >> $GITHUB_ENV
+          echo "ZAP_ABS_DIR=${{ env.TOOLS_ABS_DIR }}/zap" >> $GITHUB_ENV
+          echo "SLC_CLI_REL_DIR=${{ env.TOOLS_REL_DIR }}/slc_cli" >> $GITHUB_ENV
+          echo "SLC_CLI_ABS_DIR=${{ env.TOOLS_ABS_DIR }}/slc_cli" >> $GITHUB_ENV
+
+      - name: Export all tools to PATH
+        run: |
+          echo "${{ env.ARM_GCC_BIN_ABS_DIR }}" >> $GITHUB_PATH
+          echo "${{ env.SLC_CLI_ABS_DIR }}" >> $GITHUB_PATH
+          echo "${{ env.ZAP_ABS_DIR }}" >> $GITHUB_PATH
+          echo "STUDIO_ADAPTER_PACK_PATH=${{ env.ZAP_ABS_DIR }}" >> $GITHUB_ENV
+
+      # Prepare folder structure
+      - name: Create build environment 
+        run: |
+          mkdir -p ${{ env.TOOLS_ABS_DIR }}
+          mkdir -p ${{ env.DEPENDENCIES_ABS_DIR }}
+          mkdir -p ${{ env.SOLUTION_ABS_DIR }}
+          mkdir -p ${{ env.ARM_GCC_ABS_DIR }}
+
+      # Prepare runtime environment
+      - name: Prepare build envirnoment 
+        run: |
+          apt update
+          apt -qq install -y git curl zip unzip wget gpg python3 python3-pip cmake make ninja-build ca-certificates openssl
+          apt update
+          wget -qO- https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg && echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list
+          apt update
+          apt -qq install -y java-17-amazon-corretto-jdk
+
+      # Download repo code
+      - name: Checkout repo code 
+        uses: actions/checkout@v4
+        with:
+          path: ${{ env.SOLUTION_REL_DIR }} # Requires relative path
+
+      # Add Repo and SLCP path to ENV variables 
+      - name: Update env vars with SLCP Location data
+        run: |
+          echo "SLCP_ABS_PATH=$(find ${{ env.SOLUTION_ABS_DIR }} -type f -name "*.slcp")" >> $GITHUB_ENV
+          echo "SLCP_REL_PATH=$(find ${{ env.SOLUTION_REL_DIR }} -type f -name "*.slcp")" >> $GITHUB_ENV
+          echo "SLCP_FILENAME=$(find ${{ env.SOLUTION_ABS_DIR }} -name "*.slcp" -type f -printf "%f\n")" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$(cat ${{ env.SOLUTION_ABS_DIR }}/VERSION.md)" >> $GITHUB_ENV
+          cd ${{ env.SOLUTION_ABS_DIR }}
+          echo "RELEASE_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      # Read the SLCP contents
+      - name: Read SLCP contents
+        id: read_slcp
+        uses: teunmooij/yaml@v1
+        with:
+          from-file: ${{ env.SLCP_REL_PATH }} # Requires relative path
+
+      # Add Project Name and required SDK version to ENV variables
+      - name: Update env vars with Project SLCP extracted data
+        run: |
+          echo "SDK_ID=${{ (fromJson(steps.read_slcp.outputs.data).sdk).id }}" >> $GITHUB_ENV
+          echo "SDK_REL_DIR=${{ env.DEPENDENCIES_REL_DIR }}/${{ (fromJson(steps.read_slcp.outputs.data).sdk).id }}" >> $GITHUB_ENV
+          echo "SDK_ABS_DIR=${{ env.DEPENDENCIES_ABS_DIR }}/${{ (fromJson(steps.read_slcp.outputs.data).sdk).id }}" >> $GITHUB_ENV
+          echo "SDK_VERSION=${{ (fromJson(steps.read_slcp.outputs.data).sdk).version }}" >> $GITHUB_ENV
+          echo "PROJECT_NAME=${{ fromJson(steps.read_slcp.outputs.data).project_name }}" >> $GITHUB_ENV
+          echo "CMAKE_WORKING_ABS_DIR=${{ env.SOLUTION_ABS_DIR }}/${{ fromJson(steps.read_slcp.outputs.data).project_name }}_cmake" >> $GITHUB_ENV
+          echo "BINARIES_OUTPUT_ABS_DIR=${{ env.SOLUTION_ABS_DIR }}/${{ fromJson(steps.read_slcp.outputs.data).project_name }}_cmake/build/default_config" >> $GITHUB_ENV
+
+      # Download Simplicity SDK
+      - name: Checkout SiSDK 
+        uses: actions/checkout@v4
+        with:
+          repository: SiliconLabs/${{ env.SDK_ID }}
+          ref: v${{ env.SDK_VERSION }}-0 # Silicon Labs changes the versioning scheme very often
+          path: ${{ env.SDK_REL_DIR }}
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      # Download SLC CLI to generate projects
+      - name: Download and Unzip SLC CLI
+        run: |
+          curl -LO https://www.silabs.com/documents/login/software/slc_cli_linux.zip
+          unzip -qq slc_cli_linux.zip -d tools
+
+      # Download ZAP Tool for Zigbee projects
+      - name: Checkout ZAP Tool 
+        uses: actions/checkout@v4
+        with:
+          repository: project-chip/zap
+          ref: ${{ env.ZAP_VERSION }} # Should be retrieved somewhere
+          path: ${{ env.ZAP_REL_DIR }}
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      # Build ZAP
+      - name: Setup Node # Not sure if this is required
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: ${{ env.ZAP_REL_DIR }}/package-lock.json
+
+      # Install ZAP - TODO check certificate issue
+      - name: Build and install ZAP (Unsecure NODE_TLS_REJECT_UNAUTHORIZED = 0)
+        working-directory: ${{ env.ZAP_REL_DIR }}
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: 0
+        run: |
+          npm install
+
+      # Download ARM GCC Toolchain - Version should be retrieved somewhere, where compatibilitiy with SDKs is checked
+      - name: Download and Unzip ARM GCC Toolchain 
+        run: |
+          curl -Lo gcc-arm-none-eabi.tar.xz "https://developer.arm.com/-/media/Files/downloads/gnu/${{ env.ARM_GCC_VERSION }}/binrel/arm-gnu-toolchain-${{ env.ARM_GCC_VERSION }}-${{ env.RUNNER_ARCHITECTURE }}-arm-none-eabi.tar.xz"
+          tar xf gcc-arm-none-eabi.tar.xz --strip-components=1 -C ${{ env.ARM_GCC_ABS_DIR }}
+
+      - name: SLC Configure SDK Trust and Toolchain
+        run: |
+          slc configuration -gcc ${{ env.ARM_GCC_ABS_DIR }} --sdk ${{ env.SDK_ABS_DIR }}
+          slc signature trust --sdk ${{ env.SDK_ABS_DIR }}
+
+      # Generate Project for CI build - TODO change target board for matrix builds based on configuration file
+      - name: SLC Generate Project for local build
+        run: |
+          cd ${{ env.SOLUTION_ABS_DIR }}
+          slc generate ${{ env.SLCP_FILENAME }} -cpsdk -tlcn gcc -o cmake --with brd4186c --configuration=SL_BOARD_ENABLE_VCOM:1
+
+      # Build Project
+      - name: Build Project
+        run: |
+          cd ${{ env.CMAKE_WORKING_ABS_DIR }}
+          cmake --workflow --preset project --fresh
+
+      # Create size report
+      - name: Create size report and version ID
+        run: |
+          arm-none-eabi-size ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out -A >> ${{ env.PROJECT_NAME }}_SizeReport.log
+
+      # Create Release
+      - name: Create release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          tag_name: ${{ env.RELEASE_VER }}-${{ env.RELEASE_SHORT_SHA }}
+          release_name: ${{ env.PROJECT_NAME }} Release ${{ env.RELEASE_VER }}-${{ env.RELEASE_SHORT_SHA }}
+          draft: true
+          prerelease: true
+          body_path: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
+      # Upload Artifacts
+      - name: Upload SRec artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.s37
+          asset_name: ${{ env.PROJECT_NAME }}.s37
+          asset_content_type: application/octet-stream
+
+      - name: Upload Hex artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.hex
+          asset_name: ${{ env.PROJECT_NAME }}.hex
+          asset_content_type: application/octet-stream
+
+      - name: Upload Binary artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.bin
+          asset_name: ${{ env.PROJECT_NAME }}.bin
+          asset_content_type: application/octet-stream
+
+      - name: Upload Debug Out artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out
+          asset_name: ${{ env.PROJECT_NAME }}.out
+          asset_content_type: application/octet-stream
+
+      - name: Upload Application Map artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.map
+          asset_name: ${{ env.PROJECT_NAME }}.map
+          asset_content_type: application/octet-stream
+
+      - name: Upload Application Size Report artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.GITHUB_WORKSPACE }}/${{ env.PROJECT_NAME }}_SizeReport.log
+          asset_name: ${{ env.PROJECT_NAME }}_SizeReport.log
+          asset_content_type: text/plain

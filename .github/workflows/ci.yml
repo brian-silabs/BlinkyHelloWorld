@@ -24,6 +24,9 @@ jobs:
           echo "ARM_GCC_VERSION=12.2.Rel1" >> $GITHUB_ENV
           echo "ARM_GCC_ABS_DIR=/opt/gcc-arm-none-eabi" >> $GITHUB_ENV
           echo "ARM_GCC_BIN_ABS_DIR=/opt/gcc-arm-none-eabi/bin" >> $GITHUB_ENV
+          echo "RELEASE_VER=$(cat VERSION.md)" >> $GITHUB_ENV
+          echo "RELEASE_SHORT_SHA=$("${{ github.sha }}".SubString(0, 8))" >> $GITHUB_ENV
+          printenv
 
       - name: Preparing env vars
         run: |
@@ -58,7 +61,7 @@ jobs:
       - name: Prepare build envirnoment 
         run: |
           apt update
-          apt -qq install -y curl zip unzip wget gpg python3 python3-pip cmake make ninja-build ca-certificates openssl
+          apt -qq install -y git curl zip unzip wget gpg python3 python3-pip cmake make ninja-build ca-certificates openssl
           apt update
           wget -qO- https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg && echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list
           apt update
@@ -149,24 +152,30 @@ jobs:
       # Generate Project for CI build - TODO change target board for matrix builds based on configuration file
       - name: SLC Generate Project for local build
         run: |
-            cd solution
-            slc generate ${{ env.SLCP_FILENAME }} -cpsdk -tlcn gcc -o cmake --with brd4186c --configuration=SL_BOARD_ENABLE_VCOM:1
+          cd ${{ env.SOLUTION_ABS_DIR }}
+          slc generate ${{ env.SLCP_FILENAME }} -cpsdk -tlcn gcc -o cmake --with brd4186c --configuration=SL_BOARD_ENABLE_VCOM:1
 
       # Build Project
       - name: Build Project
         run: |
           cd ${{ env.CMAKE_WORKING_ABS_DIR }}
           cmake --workflow --preset project
-          
+
+      # Create size report - TODO
+      - name: Create size report and version ID
+        run: |
+          arm-none-eabi-size ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out -A >> ${{ env.PROJECT_NAME }}_SizeReport.log
+
       # Create Release
       - name: Create release
         uses: actions/create-release@v1
         id: create_release
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ env.PROJECT_NAME }} ${{ github.ref }} ## TODO make the whole release better looking
+          tag_name: ${{ env.RELEASE_VER }}-${{ env.RELEASE_SHORT_SHA }}
+          release_name: ${{ env.PROJECT_NAME }} Release ${{ github.ref }} ## TODO make the whole release better looking
           draft: true
           prerelease: true
+          body_path: CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
@@ -221,10 +230,12 @@ jobs:
           asset_name: ${{ env.PROJECT_NAME }}.map
           asset_content_type: application/octet-stream
 
-      - name: Get Repository name 2
-        run: |
-          printenv
-
-      - name: STOP FLOW
-        run: |
-            npm ci
+      - name: Upload Application Size Report artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}_SizeReport.log
+          asset_name: ${{ env.PROJECT_NAME }}_SizeReport.log
+          asset_content_type: text/plain

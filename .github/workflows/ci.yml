@@ -24,9 +24,6 @@ jobs:
           echo "ARM_GCC_VERSION=12.2.Rel1" >> $GITHUB_ENV
           echo "ARM_GCC_ABS_DIR=/opt/gcc-arm-none-eabi" >> $GITHUB_ENV
           echo "ARM_GCC_BIN_ABS_DIR=/opt/gcc-arm-none-eabi/bin" >> $GITHUB_ENV
-          echo "RELEASE_VER=$(cat VERSION.md)" >> $GITHUB_ENV
-          echo "RELEASE_SHORT_SHA=$("${{ github.sha }}".SubString(0, 8))" >> $GITHUB_ENV
-          printenv
 
       - name: Preparing env vars
         run: |
@@ -48,6 +45,7 @@ jobs:
           echo "${{ env.ARM_GCC_BIN_ABS_DIR }}" >> $GITHUB_PATH
           echo "${{ env.SLC_CLI_ABS_DIR }}" >> $GITHUB_PATH
           echo "${{ env.ZAP_ABS_DIR }}" >> $GITHUB_PATH
+          echo "STUDIO_ADAPTER_PACK_PATH=${{ env.ZAP_ABS_DIR }}" >> $GITHUB_ENV
 
       # Prepare folder structure
       - name: Create build environment 
@@ -79,6 +77,9 @@ jobs:
           echo "SLCP_ABS_PATH=$(find ${{ env.SOLUTION_ABS_DIR }} -type f -name "*.slcp")" >> $GITHUB_ENV
           echo "SLCP_REL_PATH=$(find ${{ env.SOLUTION_REL_DIR }} -type f -name "*.slcp")" >> $GITHUB_ENV
           echo "SLCP_FILENAME=$(find ${{ env.SOLUTION_ABS_DIR }} -name "*.slcp" -type f -printf "%f\n")" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$(cat ${{ env.SOLUTION_ABS_DIR }}/VERSION.md)" >> $GITHUB_ENV
+          cd ${{ env.SOLUTION_ABS_DIR }}
+          echo "RELEASE_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       # Read the SLCP contents
       - name: Read SLCP contents
@@ -159,9 +160,9 @@ jobs:
       - name: Build Project
         run: |
           cd ${{ env.CMAKE_WORKING_ABS_DIR }}
-          cmake --workflow --preset project
+          cmake --workflow --preset project --fresh
 
-      # Create size report - TODO
+      # Create size report
       - name: Create size report and version ID
         run: |
           arm-none-eabi-size ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out -A >> ${{ env.PROJECT_NAME }}_SizeReport.log
@@ -172,10 +173,10 @@ jobs:
         id: create_release
         with:
           tag_name: ${{ env.RELEASE_VER }}-${{ env.RELEASE_SHORT_SHA }}
-          release_name: ${{ env.PROJECT_NAME }} Release ${{ github.ref }} ## TODO make the whole release better looking
+          release_name: ${{ env.PROJECT_NAME }} Release ${{ env.RELEASE_VER }}-${{ env.RELEASE_SHORT_SHA }}
           draft: true
           prerelease: true
-          body_path: CHANGELOG.md
+          body_path: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
@@ -236,6 +237,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}_SizeReport.log
+          asset_path: ${{ env.GITHUB_WORKSPACE }}/${{ env.PROJECT_NAME }}_SizeReport.log
           asset_name: ${{ env.PROJECT_NAME }}_SizeReport.log
           asset_content_type: text/plain

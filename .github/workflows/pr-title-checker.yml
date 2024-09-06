@@ -1,4 +1,4 @@
-name: Check PR title
+name: PR Title Checker
 
 on:
   pull_request:
@@ -20,4 +20,4 @@ jobs:
     steps:
       - uses: aslafy-z/conventional-pr-title-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}

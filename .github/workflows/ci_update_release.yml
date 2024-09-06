@@ -37,6 +37,8 @@ jobs:
 
       - name: Commit updated Changelog
         uses: stefanzweifel/git-auto-commit-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         with:
           branch: dev
           commit_message: 'docs(changelog): update changelog'

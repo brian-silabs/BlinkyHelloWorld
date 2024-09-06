@@ -169,7 +169,6 @@ jobs:
       - name: Create size report
         run: |
           arm-none-eabi-size ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out -A >> ${{ env.PROJECT_NAME }}_SizeReport.log
-          ls -al ${{ env.BINARIES_OUTPUT_ABS_DIR }}
 
       # Create Release
       - name: Create release

@@ -1,12 +1,30 @@
-name: Update Changelog
+name: 'CI Update Release'
+
+# on:
+#   push:
+#     branches:
+#       - dev
 
 on:
   release:
     types: 
       - created
+      - prereleased
+      - released
+      - published
 
 jobs:
-  update:
+  update_release_draft:
+    name: Release drafter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update Release Draft
+        uses: release-drafter/release-drafter@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
+  update_changelog:
     name: Update Changelog
     runs-on: ubuntu-latest
 

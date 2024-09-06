@@ -180,12 +180,6 @@ jobs:
           draft: true
           prerelease: true
           bodyFile: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
-          artifacts: |
-                     "${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out,
-                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.hex,
-                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.bin,
-                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.s37,
-                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.map,
-                      ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log
+          artifacts: '${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.*, ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log'
           token: ${{ secrets.ACCESS_TOKEN }}
 

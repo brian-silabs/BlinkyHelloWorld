@@ -18,10 +18,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Add Repo and SLCP path to ENV variables 
+      - name: Update env vars with SLCP Location data
+        run: |
+          echo "RELEASE_VERSION=$(cat VERSION.md)" >> $GITHUB_ENV
+
       - name: Update Release Draft
         uses: release-drafter/release-drafter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          tag: v${{ env.RELEASE_VERSION }}
 
   update_changelog:
     name: Update Changelog
@@ -29,9 +39,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Update Changelog
         uses: stefanzweifel/changelog-updater-action@v1
         with:

@@ -170,14 +170,14 @@ jobs:
         run: |
           arm-none-eabi-size ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out -A >> ${{ env.PROJECT_NAME }}_SizeReport.log
 
-      # Create Release
+      # Create Release Draft
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
           tag: v${{ env.RELEASE_VERSION }}
           name: ${{ env.PROJECT_NAME }} v${{ env.RELEASE_VERSION }}-${{ env.RELEASE_SHORT_SHA }}
-          draft: true
           prerelease: true
+          updateOnlyUnreleased: true
           bodyFile: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
           artifacts: '${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.*, ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log'
           token: ${{ secrets.ACCESS_TOKEN }}

@@ -4,14 +4,11 @@ name: 'CI Update Release'
 #   push:
 #     branches:
 #       - dev
-
+# Will not be triggered on drafts
 on:
   release:
     types: 
-      - created
       - prereleased
-      - released
-      - published
 
 jobs:
   update_release_draft:

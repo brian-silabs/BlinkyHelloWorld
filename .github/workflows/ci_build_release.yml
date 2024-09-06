@@ -1,4 +1,4 @@
-name: CI Workflow
+name: CI Build Artifacts
 
 on:
   push:
@@ -174,7 +174,7 @@ jobs:
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
-          tag: v${{ env.RELEASE_VERSION }}-${{ env.RELEASE_SHORT_SHA }}
+          tag: v${{ env.RELEASE_VERSION }}
           name: ${{ env.PROJECT_NAME }} v${{ env.RELEASE_VERSION }}-${{ env.RELEASE_SHORT_SHA }}
           draft: true
           prerelease: true

@@ -175,6 +175,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: v${{ env.RELEASE_VERSION }}
+          commit: ${{ env.RELEASE_SHORT_SHA }} # An optional commit reference. This will be used to create the tag if it does not exist.
           name: ${{ env.PROJECT_NAME }} v${{ env.RELEASE_VERSION }}-${{ env.RELEASE_SHORT_SHA }}
           prerelease: true
           updateOnlyUnreleased: true

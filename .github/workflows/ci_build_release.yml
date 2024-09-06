@@ -166,9 +166,10 @@ jobs:
           cmake --workflow --preset project --fresh
 
       # Create size report
-      - name: Create size report and version ID
+      - name: Create size report
         run: |
           arm-none-eabi-size ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out -A >> ${{ env.PROJECT_NAME }}_SizeReport.log
+          ls -al ${{ env.BINARIES_OUTPUT_ABS_DIR }}
 
       # Create Release
       - name: Create release
@@ -180,10 +181,11 @@ jobs:
           prerelease: true
           bodyFile: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
           artifacts: |
-                     "${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.s37,
+                     "${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out,
                       ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.hex,
                       ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.bin,
-                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out,
+                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.s37,
                       ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.map,
                       ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log
           token: ${{ secrets.ACCESS_TOKEN }}
+

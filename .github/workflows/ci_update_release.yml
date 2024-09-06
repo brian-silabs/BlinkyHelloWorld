@@ -8,9 +8,7 @@ name: 'CI Update Release'
 on:
   release:
     types: 
-      - prereleased
       - released
-      - published
 
 jobs:
   update_release_draft:

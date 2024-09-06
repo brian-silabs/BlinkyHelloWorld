@@ -66,7 +66,6 @@ jobs:
           sudo apt -qq install -y java-17-amazon-corretto-jdk
           java --version
           sudo update-alternatives --set java /usr/lib/jvm/java-17-amazon-corretto/bin/java
-          sudo update-alternatives --config java
           java --version
 
       # Download repo code
@@ -173,74 +172,18 @@ jobs:
 
       # Create Release
       - name: Create release
-        uses: actions/create-release@v1
-        id: create_release
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ env.RELEASE_VER }}-${{ env.RELEASE_SHORT_SHA }}
-          release_name: ${{ env.PROJECT_NAME }} Release ${{ env.RELEASE_VER }}-${{ env.RELEASE_SHORT_SHA }}
+          tag: v${{ env.RELEASE_VERSION }}-${{ env.RELEASE_SHORT_SHA }}
+          name: ${{ env.PROJECT_NAME }} v${{ env.RELEASE_VERSION }}-${{ env.RELEASE_SHORT_SHA }}
           draft: true
           prerelease: true
-          body_path: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-
-      # Upload Artifacts
-      - name: Upload SRec artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.s37
-          asset_name: ${{ env.PROJECT_NAME }}.s37
-          asset_content_type: application/octet-stream
-
-      - name: Upload Hex artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.hex
-          asset_name: ${{ env.PROJECT_NAME }}.hex
-          asset_content_type: application/octet-stream
-
-      - name: Upload Binary artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.bin
-          asset_name: ${{ env.PROJECT_NAME }}.bin
-          asset_content_type: application/octet-stream
-
-      - name: Upload Debug Out artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out
-          asset_name: ${{ env.PROJECT_NAME }}.out
-          asset_content_type: application/octet-stream
-
-      - name: Upload Application Map artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.map
-          asset_name: ${{ env.PROJECT_NAME }}.map
-          asset_content_type: application/octet-stream
-
-      - name: Upload Application Size Report artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log
-          asset_name: ${{ env.PROJECT_NAME }}_SizeReport.log
-          asset_content_type: text/plain
+          bodyFile: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
+          artifacts: |
+                     "${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.s37,
+                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.hex,
+                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.bin,
+                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.out,
+                      ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.map,
+                      ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log
+          token: ${{ secrets.ACCESS_TOKEN }}

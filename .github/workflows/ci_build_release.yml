@@ -224,7 +224,7 @@ jobs:
         with:
           latest-version: v${{ env.RELEASE_VERSION }}
           release-notes: ${{ steps.create_release.outputs.body }}
-          path-to-changelog: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
+          path-to-changelog: ${{ env.SOLUTION_REL_DIR }}/CHANGELOG.md
 
       # Requires permissions at the repository level : Settings -> Action -> General -> Workflow permissions and choose read and write permissions
       - name: Commit updated Changelog

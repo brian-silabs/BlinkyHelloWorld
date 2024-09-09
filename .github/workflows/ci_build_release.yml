@@ -183,22 +183,22 @@ jobs:
   #   runs-on: ubuntu-latest
   #   steps:
 
-      - name: Update Release Draft
+      - name: Create Release Draft
         uses: release-drafter/release-drafter@v6
+        id : create_release
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         with:
           tag: v${{ env.RELEASE_VERSION }}
           commitish: ${{ env.RELEASE_SHA }} # An optional commit reference. This will be used to create the tag if it does not exist.
-          name: v${{ env.RELEASE_VERSION }}
+          name: ${{ env.PROJECT_NAME }} v${{ env.RELEASE_VERSION }}
       
-      - name: Upload Artifacts to draft
-        uses: actions/upload-artifact@v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      - name: Upload Assets
+        uses: shogo82148/actions-upload-release-asset@v1
         with:
-          name: my-artifact
-          path: |
+          github_token: ${{ secrets.ACCESS_TOKEN }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: | 
             ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.*
             ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log
 

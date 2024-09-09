@@ -233,4 +233,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         with:
           commit_message: 'docs(changelog): update changelog'
-          file_pattern: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
+          file_pattern: CHANGELOG.md
+          repository: ${{ env.SOLUTION_REL_DIR }}

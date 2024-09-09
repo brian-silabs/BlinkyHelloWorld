@@ -201,17 +201,3 @@ jobs:
           asset_path: | 
             ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.*
             ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log
-
-      # # Create Release Draft
-      # - name: Create release
-      #   uses: ncipollo/release-action@v1
-      #   with:
-      #     tag: v${{ env.RELEASE_VERSION }} 
-      #     commit: ${{ env.RELEASE_SHA }} # An optional commit reference. This will be used to create the tag if it does not exist.
-      #     name: v${{ env.RELEASE_VERSION }}
-      #     prerelease: true
-      #     updateOnlyUnreleased: true
-      #     bodyFile: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
-      #     artifacts: '${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.*, ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log'
-      #     token: ${{ secrets.ACCESS_TOKEN }}
-

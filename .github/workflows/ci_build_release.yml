@@ -202,3 +202,24 @@ jobs:
           asset_path: | 
             ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.*
             ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log
+
+  # update_changelog:
+  #   name: Update Changelog
+  #   needs: prepare_build_environment
+  #   runs-on: ubuntu-latest
+  #   steps:
+
+      - name: Update Changelog
+        uses: stefanzweifel/changelog-updater-action@v1
+        with:
+          latest-version: ${{ github.event.release.name }}
+          release-notes: ${{ github.event.release.body }}
+
+      # Requires permissions at the repository level : Settings -> Action -> General -> Workflow permissions and choose read and write permissions
+      - name: Commit updated Changelog
+        uses: stefanzweifel/git-auto-commit-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        with:
+          commit_message: 'docs(changelog): update changelog'
+          file_pattern: CHANGELOG.md

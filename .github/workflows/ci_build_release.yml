@@ -222,8 +222,8 @@ jobs:
       - name: Update Changelog
         uses: stefanzweifel/changelog-updater-action@v1
         with:
-          latest-version: ${{ github.event.release.name }}
-          release-notes: ${{ github.event.release.body }}
+          latest-version: v${{ env.RELEASE_VERSION }}
+          release-notes: ${{ steps.create_release.outputs.body }}
 
       # Requires permissions at the repository level : Settings -> Action -> General -> Workflow permissions and choose read and write permissions
       - name: Commit updated Changelog

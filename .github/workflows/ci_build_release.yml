@@ -31,18 +31,21 @@ jobs:
           echo "REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
           echo "RUNNER_ARCHITECTURE=$(arch)" >> $GITHUB_ENV
 
-      - name: Preparing env vars 2
+      - name: Preparing env vars for tools
         run: |
           echo "ZAP_REL_DIR=${{ env.TOOLS_REL_DIR }}/zap" >> $GITHUB_ENV
           echo "ZAP_ABS_DIR=${{ env.TOOLS_ABS_DIR }}/zap" >> $GITHUB_ENV
           echo "SLC_CLI_REL_DIR=${{ env.TOOLS_REL_DIR }}/slc_cli" >> $GITHUB_ENV
           echo "SLC_CLI_ABS_DIR=${{ env.TOOLS_ABS_DIR }}/slc_cli" >> $GITHUB_ENV
+          echo "COMMANDER_REL_DIR=${{ env.TOOLS_REL_DIR }}/commander" >> $GITHUB_ENV
+          echo "COMMANDER_ABS_DIR=${{ env.TOOLS_ABS_DIR }}/commander" >> $GITHUB_ENV
 
       - name: Export all tools to PATH
         run: |
           echo "${{ env.ARM_GCC_BIN_ABS_DIR }}" >> $GITHUB_PATH
           echo "${{ env.SLC_CLI_ABS_DIR }}" >> $GITHUB_PATH
           echo "${{ env.ZAP_ABS_DIR }}" >> $GITHUB_PATH
+          echo "${{ env.COMMANDER_ABS_DIR }}" >> $GITHUB_PATH
           echo "STUDIO_ADAPTER_PACK_PATH=${{ env.ZAP_ABS_DIR }}" >> $GITHUB_ENV
 
       # Prepare folder structure
@@ -110,11 +113,18 @@ jobs:
           path: ${{ env.SDK_REL_DIR }}
           token: ${{ secrets.ACCESS_TOKEN }}
 
+      # Download Commander to generate projects
+      - name: Download and Unzip Simplicity Commander
+        run: |
+          curl -LO https://www.silabs.com/documents/public/software/SimplicityCommander-Linux.zip
+          unzip -qq SimplicityCommander-Linux.zip 
+          tar -xf ./SimplicityCommander-Linux/Commander_linux_x86_64_1v16p11b1660.tar.bz -C ${{ env.TOOLS_ABS_DIR }}
+
       # Download SLC CLI to generate projects
       - name: Download and Unzip SLC CLI
         run: |
           curl -LO https://www.silabs.com/documents/login/software/slc_cli_linux.zip
-          unzip -qq slc_cli_linux.zip -d tools
+          unzip -qq slc_cli_linux.zip -d ${{ env.TOOLS_ABS_DIR }}
 
       # Download ARM GCC Toolchain - Version should be retrieved somewhere, where compatibilitiy with SDKs is checked
       - name: Download and Unzip ARM GCC Toolchain 

@@ -198,6 +198,7 @@ jobs:
         with:
           github_token: ${{ secrets.ACCESS_TOKEN }}
           upload_url: ${{ steps.create_release.outputs.upload_url }}
+          overwrite: true
           asset_path: | 
             ${{ env.BINARIES_OUTPUT_ABS_DIR }}/${{ env.PROJECT_NAME }}.*
             ${{ github.workspace }}/${{ env.PROJECT_NAME }}_SizeReport.log

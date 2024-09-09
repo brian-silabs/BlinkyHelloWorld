@@ -224,6 +224,7 @@ jobs:
         with:
           latest-version: v${{ env.RELEASE_VERSION }}
           release-notes: ${{ steps.create_release.outputs.body }}
+          path-to-changelog: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
 
       # Requires permissions at the repository level : Settings -> Action -> General -> Workflow permissions and choose read and write permissions
       - name: Commit updated Changelog
@@ -232,4 +233,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         with:
           commit_message: 'docs(changelog): update changelog'
-          file_pattern: CHANGELOG.md
+          file_pattern: ${{ env.SOLUTION_ABS_DIR }}/CHANGELOG.md
